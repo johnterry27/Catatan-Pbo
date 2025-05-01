@@ -442,4 +442,72 @@ public class MahasiswaForm extends JFrame {
     }
 }
 
+
+```
+
+
+
+
+
+
+
+#  CATATAN UTS PBO — UBAH APLIKASI CRUD JAVA GUI (REST API)
+
+##  1. Ganti Nama Class dan File
+| Sebelumnya (contoh: Buku) | Ubah Menjadi (contoh: Mahasiswa) |
+|---------------------------|----------------------------------|
+| `Book.java`               | `Mahasiswa.java`                |
+| `BookService.java`        | `MahasiswaService.java`         |
+| `LibraryApp.java`         | `MahasiswaApp.java`             |
+| `BookForm.java`           | `MahasiswaForm.java`            |
+
 ---
+
+##  2. Ganti Nama Atribut / Field
+| Atribut Buku       | Atribut Mahasiswa |
+|--------------------|-------------------|
+| `id` → `long`      | `nim` → `String`  |
+| `title` → `String` | `nama` → `String` |
+| `author` → `String`| `prodi` → `String`|
+
+---
+
+##  3. Ganti Struktur Data di Service
+```java
+// Lama:
+Map<Long, Book> bookMap;
+
+// Baru:
+Map<String, Mahasiswa> mahasiswaMap;
+```
+
+---
+
+##  4. Ubah Endpoint REST API
+| Operasi | URL Lama              | URL Baru                 |
+|---------|------------------------|--------------------------|
+| Tampil  | `/api/books`          | `/api/mahasiswa`         |
+| Detail  | `/api/books/:id`      | `/api/mahasiswa/:nim`    |
+| Tambah  | `POST /api/books`     | `POST /api/mahasiswa`    |
+| Edit    | `PUT /api/books/:id`  | `PUT /api/mahasiswa/:nim`|
+| Hapus   | `DELETE /api/books/:id`| `DELETE /api/mahasiswa/:nim`|
+
+---
+
+##  5. Ubah Label di GUI
+- Kolom tabel: `{"NIM", "Nama", "Prodi"}`
+- Text field: `nimField`, `namaField`, `prodiField`
+- Tombol: `Tambah`, `Edit`, `Hapus`, `Refresh`
+
+---
+
+##  6. Gunakan Class Mahasiswa untuk JSON
+```java
+new Gson().toJson(new Mahasiswa(...));
+new Gson().fromJson(json, Mahasiswa.class);
+```
+
+Pastikan semua `Book` diubah jadi `Mahasiswa`.
+
+
+
