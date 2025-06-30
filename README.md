@@ -2,6 +2,203 @@
 
 ## Benner.java
 ```java
+package com.mycompany.mavenproject3;
+
+import java.awt.BorderLayout;                       // ✅ DITAMBAHKAN
+import java.awt.GridLayout;                         // ✅ DITAMBAHKAN
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;                     // ✅ DITAMBAHKAN
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;                     // ✅ DITAMBAHKAN
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.table.DefaultTableModel;
+import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
+
+public class ProductForm extends JFrame {
+    private JTable drinkTable;
+    private DefaultTableModel tableModel;
+    private JTextField codeField;
+    private JTextField nameField;
+    private JComboBox<String> categoryField;
+    private JTextField priceField;
+    private JTextField stockField;
+    private JButton saveButton;
+
+    // ✅ DITAMBAHKAN untuk tombol Edit dan Hapus
+    private JButton editButton;
+    private JButton deleteButton;
+
+    public ProductForm() {
+        // Data awal
+        List<Product> products = new ArrayList<>();
+        products.add(new Product(1, "P001", "Americano", "Coffee", 18000, 10));
+        products.add(new Product(2, "P002", "Pandan Latte", "Coffee", 15000, 8));
+
+        setTitle("WK. Cuan | Stok Barang");
+        setSize(600, 450);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setLayout(new BorderLayout());               // ✅ DITAMBAHKAN
+
+        // === Form Panel ===
+        JPanel formPanel = new JPanel(new GridLayout(7, 2, 5, 5)); // ✅ DITAMBAHKAN agar layout rapi
+
+        formPanel.add(new JLabel("Kode Barang"));
+        codeField = new JTextField(15);              // ✅ Tambah ukuran field
+        formPanel.add(codeField);
+
+        formPanel.add(new JLabel("Nama Barang:"));
+        nameField = new JTextField(15);
+        formPanel.add(nameField);
+
+        formPanel.add(new JLabel("Kategori:"));
+        categoryField = new JComboBox<>(new String[]{"Coffee", "Dairy", "Juice", "Soda", "Tea"});
+        formPanel.add(categoryField);
+
+        formPanel.add(new JLabel("Harga Jual:"));
+        priceField = new JTextField(15);
+        formPanel.add(priceField);
+
+        formPanel.add(new JLabel("Stok Tersedia:"));
+        stockField = new JTextField(15);
+        formPanel.add(stockField);
+
+        // Tombol CRUD
+        saveButton = new JButton("Simpan");
+        editButton = new JButton("Edit");            // ✅ DITAMBAHKAN
+        deleteButton = new JButton("Hapus");         // ✅ DITAMBAHKAN
+
+        formPanel.add(saveButton);
+        formPanel.add(editButton);                   // ✅ DITAMBAHKAN
+        formPanel.add(deleteButton);                 // ✅ DITAMBAHKAN
+
+        add(formPanel, BorderLayout.NORTH);          // ✅ Tambahkan panel form ke frame
+
+        // === Tabel ===
+        tableModel = new DefaultTableModel(new String[]{"Kode", "Nama", "Kategori", "Harga Jual", "Stok"}, 0);
+        drinkTable = new JTable(tableModel);
+        add(new JScrollPane(drinkTable), BorderLayout.CENTER); // ✅ Tambah scroll ke tabel
+
+        // Load data awal
+        loadProductData(products);
+
+        // === Action Listener ===
+
+        // CREATE
+        saveButton.addActionListener(e -> {
+            try {
+                String code = codeField.getText();
+                String name = nameField.getText();
+                String category = (String) categoryField.getSelectedItem();
+                int price = Integer.parseInt(priceField.getText());
+                int stock = Integer.parseInt(stockField.getText());
+
+                tableModel.addRow(new Object[]{code, name, category, price, stock});
+                clearForm(); // ✅ Reset input
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Input tidak valid.");
+            }
+        });
+
+        // UPDATE
+        editButton.addActionListener(e -> {
+            int row = drinkTable.getSelectedRow();
+            if (row != -1) {
+                try {
+                    tableModel.setValueAt(codeField.getText(), row, 0);
+                    tableModel.setValueAt(nameField.getText(), row, 1);
+                    tableModel.setValueAt(categoryField.getSelectedItem(), row, 2);
+                    tableModel.setValueAt(Integer.parseInt(priceField.getText()), row, 3);
+                    tableModel.setValueAt(Integer.parseInt(stockField.getText()), row, 4);
+                    clearForm(); // ✅ Reset input
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Input tidak valid.");
+                }
+            }
+        });
+
+        // DELETE
+        deleteButton.addActionListener(e -> {
+            int row = drinkTable.getSelectedRow();
+            if (row != -1) {
+                tableModel.removeRow(row);
+                clearForm(); // ✅ Reset input
+            }
+        });
+
+        // READ – saat baris di klik, tampilkan data ke form
+        drinkTable.getSelectionModel().addListSelectionListener(e -> {
+            int row = drinkTable.getSelectedRow();
+            if (row != -1) {
+                codeField.setText(tableModel.getValueAt(row, 0).toString());
+                nameField.setText(tableModel.getValueAt(row, 1).toString());
+                categoryField.setSelectedItem(tableModel.getValueAt(row, 2).toString());
+                priceField.setText(tableModel.getValueAt(row, 3).toString());
+                stockField.setText(tableModel.getValueAt(row, 4).toString());
+            }
+        });
+
+        // Tampilkan frame
+        setVisible(true);                             // ✅ DITAMBAHKAN
+    }
+
+    private void loadProductData(List<Product> productList) {
+        for (Product product : productList) {
+            tableModel.addRow(new Object[]{
+                product.getCode(), product.getName(), product.getCategory(), product.getPrice(), product.getStock()
+            });
+        }
+    }
+
+    // ✅ Fungsi reset input form
+    private void clearForm() {
+        codeField.setText("");
+        nameField.setText("");
+        categoryField.setSelectedIndex(0);
+        priceField.setText("");
+        stockField.setText("");
+    }
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Benner.java
+```java
 import java.awt.*;
 import javax.swing.*;
 
