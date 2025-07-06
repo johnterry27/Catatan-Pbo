@@ -174,7 +174,8 @@ public class ProductForm extends JFrame {
 
 
 ## Benner.java
-```javapackage org.yourcompany.yourproject;
+```java
+package org.yourcompany.yourproject;
 
 import java.awt.*; // 📌 digunakan untuk layout
 import java.io.*;
