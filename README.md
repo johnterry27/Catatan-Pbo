@@ -388,6 +388,8 @@ public class ProductForm extends JFrame {
 
 ## BannerServer.java
 ```java
+JButton btnShow = new JButton("Show");
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
