@@ -2,170 +2,146 @@
 
 ## Benner.java
 ```java
-package com.mycompany.mavenproject3;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel; // CATATAN: Import tambahan untuk JTable
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.net.*;
 
-import java.awt.BorderLayout;                       // ✅ DITAMBAHKAN
-import java.awt.GridLayout;                         // ✅ DITAMBAHKAN
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;                     // ✅ DITAMBAHKAN
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;                     // ✅ DITAMBAHKAN
-import javax.swing.JTable;
-import javax.swing.JTextField;
-import javax.swing.table.DefaultTableModel;
-import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
+import com.google.gson.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 
 public class ProductForm extends JFrame {
-    private JTable drinkTable;
-    private DefaultTableModel tableModel;
-    private JTextField codeField;
-    private JTextField nameField;
-    private JComboBox<String> categoryField;
-    private JTextField priceField;
-    private JTextField stockField;
-    private JButton saveButton;
+    private JTextField tfName = new JTextField();
+    private JTextField tfPrice = new JTextField();
+    private JTextField tfCategory = new JTextField();
 
-    // ✅ DITAMBAHKAN untuk tombol Edit dan Hapus
-    private JButton editButton;
-    private JButton deleteButton;
+    // CATATAN: Variabel baru untuk tabel
+    private JTable productTable;
+    private DefaultTableModel tableModel;
+    private String[] columnNames = {"ID", "Name", "Price", "Category"};
 
     public ProductForm() {
-        // Data awal
-        List<Product> products = new ArrayList<>();
-        products.add(new Product(1, "P001", "Americano", "Coffee", 18000, 10));
-        products.add(new Product(2, "P002", "Pandan Latte", "Coffee", 15000, 8));
-
-        setTitle("WK. Cuan | Stok Barang");
-        setSize(600, 450);
+        setTitle("GraphQL Product Form");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        // Panel input
+        JPanel inputPanel = new JPanel(new GridLayout(4, 2));
+        inputPanel.add(new JLabel("Name:"));
+        inputPanel.add(tfName);
+        inputPanel.add(new JLabel("Price:"));
+        inputPanel.add(tfPrice);
+        inputPanel.add(new JLabel("Category:"));
+        inputPanel.add(tfCategory);
+
+        JButton btnAdd = new JButton("Add Product");
+        JButton btnFetch = new JButton("Show All");
+        inputPanel.add(btnAdd);
+        inputPanel.add(btnFetch);
+
+        add(inputPanel, BorderLayout.NORTH); // Posisi form input
+
+        // CATATAN: Tabel ditambahkan menggantikan JTextArea
+        tableModel = new DefaultTableModel(columnNames, 0);
+        productTable = new JTable(tableModel);
+        add(new JScrollPane(productTable), BorderLayout.CENTER);
+
+        btnAdd.addActionListener(e -> tambahProduk());
+        btnFetch.addActionListener(e -> ambilSemuaProduk());
+
+        pack();
         setLocationRelativeTo(null);
-        setLayout(new BorderLayout());               // ✅ DITAMBAHKAN
-
-        // === Form Panel ===
-        JPanel formPanel = new JPanel(new GridLayout(7, 2, 5, 5)); // ✅ DITAMBAHKAN agar layout rapi
-
-        formPanel.add(new JLabel("Kode Barang"));
-        codeField = new JTextField(15);              // ✅ Tambah ukuran field
-        formPanel.add(codeField);
-
-        formPanel.add(new JLabel("Nama Barang:"));
-        nameField = new JTextField(15);
-        formPanel.add(nameField);
-
-        formPanel.add(new JLabel("Kategori:"));
-        categoryField = new JComboBox<>(new String[]{"Coffee", "Dairy", "Juice", "Soda", "Tea"});
-        formPanel.add(categoryField);
-
-        formPanel.add(new JLabel("Harga Jual:"));
-        priceField = new JTextField(15);
-        formPanel.add(priceField);
-
-        formPanel.add(new JLabel("Stok Tersedia:"));
-        stockField = new JTextField(15);
-        formPanel.add(stockField);
-
-        // Tombol CRUD
-        saveButton = new JButton("Simpan");
-        editButton = new JButton("Edit");            // ✅ DITAMBAHKAN
-        deleteButton = new JButton("Hapus");         // ✅ DITAMBAHKAN
-
-        formPanel.add(saveButton);
-        formPanel.add(editButton);                   // ✅ DITAMBAHKAN
-        formPanel.add(deleteButton);                 // ✅ DITAMBAHKAN
-
-        add(formPanel, BorderLayout.NORTH);          // ✅ Tambahkan panel form ke frame
-
-        // === Tabel ===
-        tableModel = new DefaultTableModel(new String[]{"Kode", "Nama", "Kategori", "Harga Jual", "Stok"}, 0);
-        drinkTable = new JTable(tableModel);
-        add(new JScrollPane(drinkTable), BorderLayout.CENTER); // ✅ Tambah scroll ke tabel
-
-        // Load data awal
-        loadProductData(products);
-
-        // === Action Listener ===
-
-        // CREATE
-        saveButton.addActionListener(e -> {
-            try {
-                String code = codeField.getText();
-                String name = nameField.getText();
-                String category = (String) categoryField.getSelectedItem();
-                int price = Integer.parseInt(priceField.getText());
-                int stock = Integer.parseInt(stockField.getText());
-
-                tableModel.addRow(new Object[]{code, name, category, price, stock});
-                clearForm(); // ✅ Reset input
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Input tidak valid.");
-            }
-        });
-
-        // UPDATE
-        editButton.addActionListener(e -> {
-            int row = drinkTable.getSelectedRow();
-            if (row != -1) {
-                try {
-                    tableModel.setValueAt(codeField.getText(), row, 0);
-                    tableModel.setValueAt(nameField.getText(), row, 1);
-                    tableModel.setValueAt(categoryField.getSelectedItem(), row, 2);
-                    tableModel.setValueAt(Integer.parseInt(priceField.getText()), row, 3);
-                    tableModel.setValueAt(Integer.parseInt(stockField.getText()), row, 4);
-                    clearForm(); // ✅ Reset input
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "Input tidak valid.");
-                }
-            }
-        });
-
-        // DELETE
-        deleteButton.addActionListener(e -> {
-            int row = drinkTable.getSelectedRow();
-            if (row != -1) {
-                tableModel.removeRow(row);
-                clearForm(); // ✅ Reset input
-            }
-        });
-
-        // READ – saat baris di klik, tampilkan data ke form
-        drinkTable.getSelectionModel().addListSelectionListener(e -> {
-            int row = drinkTable.getSelectedRow();
-            if (row != -1) {
-                codeField.setText(tableModel.getValueAt(row, 0).toString());
-                nameField.setText(tableModel.getValueAt(row, 1).toString());
-                categoryField.setSelectedItem(tableModel.getValueAt(row, 2).toString());
-                priceField.setText(tableModel.getValueAt(row, 3).toString());
-                stockField.setText(tableModel.getValueAt(row, 4).toString());
-            }
-        });
-
-        // Tampilkan frame
-        setVisible(true);                             // ✅ DITAMBAHKAN
+        setVisible(true);
     }
 
-    private void loadProductData(List<Product> productList) {
-        for (Product product : productList) {
-            tableModel.addRow(new Object[]{
-                product.getCode(), product.getName(), product.getCategory(), product.getPrice(), product.getStock()
-            });
+    // CATATAN: Diubah untuk menampilkan pesan popup dan refresh tabel
+    private void tambahProduk() {
+        try {
+            String query = String.format(
+                "mutation { addProduct(name: \"%s\", price: %s, category: \"%s\") { id name } }",
+                tfName.getText(),
+                tfPrice.getText(),
+                tfCategory.getText()
+            );
+
+            String jsonRequest = new Gson().toJson(new GraphQLQuery(query));
+            String response = sendGraphQLRequest(jsonRequest);
+
+            JOptionPane.showMessageDialog(this, "Product added successfully!");
+            ambilSemuaProduk(); // CATATAN: otomatis refresh tabel
+
+            // Kosongkan input form
+            tfName.setText("");
+            tfPrice.setText("");
+            tfCategory.setText("");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
         }
     }
 
-    // ✅ Fungsi reset input form
-    private void clearForm() {
-        codeField.setText("");
-        nameField.setText("");
-        categoryField.setSelectedIndex(0);
-        priceField.setText("");
-        stockField.setText("");
+    // CATATAN: Diubah untuk mengisi JTable, bukan lagi JTextArea
+    private void ambilSemuaProduk() {
+        try {
+            String query = "query { allProducts { id name price category } }";
+            String jsonRequest = new Gson().toJson(new GraphQLQuery(query));
+            String response = sendGraphQLRequest(jsonRequest);
+
+            JsonObject data = JsonParser.parseString(response)
+                .getAsJsonObject().getAsJsonObject("data");
+            JsonArray products = data.getAsJsonArray("allProducts");
+
+            tableModel.setRowCount(0); // Bersihkan isi tabel sebelum isi baru
+
+            for (JsonElement el : products) {
+                JsonObject prod = el.getAsJsonObject();
+                Object[] row = {
+                    prod.get("id").getAsLong(),
+                    prod.get("name").getAsString(),
+                    prod.get("price").getAsDouble(),
+                    prod.get("category").getAsString()
+                };
+                tableModel.addRow(row); // Tambahkan baris ke tabel
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+        }
+    }
+
+    private String sendGraphQLRequest(String json) throws Exception {
+        URL url = new URL("http://localhost:4567/graphql");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(json.getBytes());
+        }
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(conn.getInputStream()))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) sb.append(line).append("\n");
+            return sb.toString();
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(ProductForm::new);
+    }
+
+    // Class bantu untuk query GraphQL
+    class GraphQLQuery {
+        String query;
+        GraphQLQuery(String query) {
+            this.query = query;
+        }
     }
 }
+
 
 ```
 
