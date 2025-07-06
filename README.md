@@ -174,64 +174,214 @@ public class ProductForm extends JFrame {
 
 
 ## Benner.java
-```java
-import java.awt.*;
+```javapackage org.yourcompany.yourproject;
+
+import java.awt.*; // 📌 digunakan untuk layout
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel; // ✅ Ditambahkan: untuk tabel
 
-public class Banner extends JPanel implements Runnable {
-    private String baseText = "Your name here";
-    private String scrollingText = "";
-    private Thread t;
-    private boolean stopFlag;
+import com.google.gson.*; // ✅ Ditambahkan: untuk parsing JSON
 
-    public Banner() {
-        setBackground(Color.CYAN);
-        setForeground(Color.RED);
-        t = new Thread(this);
-        t.start();
-    }
+public class ProductForm extends JFrame {
+    private JTextField tfName = new JTextField();
+    private JTextField tfPrice = new JTextField();
+    private JTextField tfCategory = new JTextField();
 
-    public synchronized void setText(String text) {
-        this.baseText = text;
-        rebuildScrollingText();
-    }
+    // ❌ Diganti: outputArea dihapus
+    // private JTextArea outputArea = new JTextArea(10, 30);
 
-    private void rebuildScrollingText() {
-       
-        StringBuilder sb = new StringBuilder();
-        int panelWidth = getWidth() > 0 ? getWidth() : 400; 
-        int repeat = panelWidth / (baseText.length() * 10); 
-        for (int i = 0; i < repeat + 10; i++) {
-            sb.append(baseText).append(" ");
-        }
-        scrollingText = sb.toString();
-    }
+    // ✅ Ditambahkan: untuk menampilkan data di tabel
+    private JTable productTable;
+    private DefaultTableModel tableModel;
+    private String[] columnNames = {"ID", "Name", "Price", "Category"};
+    private Long selectedId = null; // ✅ Ditambahkan: simpan ID untuk update/delete
 
-    public void run() {
-        rebuildScrollingText();
-        while (!stopFlag) {
-            repaint();
-            synchronized (this) {
-                char ch = scrollingText.charAt(0);
-                scrollingText = scrollingText.substring(1) + ch;
+    public ProductForm() {
+        setTitle("GraphQL Product Form");
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        // ==== Panel Form Input ====
+        JPanel formPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+        formPanel.add(new JLabel("Name:"));
+        formPanel.add(tfName);
+        formPanel.add(new JLabel("Price:"));
+        formPanel.add(tfPrice);
+        formPanel.add(new JLabel("Category:"));
+        formPanel.add(tfCategory);
+
+        // ==== Tombol ====
+        JButton btnAdd = new JButton("Add");         // ✅ Ditambahkan
+        JButton btnShow = new JButton("Show All");   // ✅ Ditambahkan
+        JButton btnUpdate = new JButton("Update");   // ✅ Ditambahkan
+        JButton btnDelete = new JButton("Delete");   // ✅ Ditambahkan
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        buttonPanel.add(btnAdd);
+        buttonPanel.add(btnShow);
+        buttonPanel.add(btnUpdate);
+        buttonPanel.add(btnDelete);
+
+        // Gabungkan input dan tombol
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.add(formPanel, BorderLayout.CENTER);
+        topPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        add(topPanel, BorderLayout.NORTH);
+
+        // ==== Tabel Produk ====
+        tableModel = new DefaultTableModel(columnNames, 0); // ✅ Tabel model
+        productTable = new JTable(tableModel);
+        add(new JScrollPane(productTable), BorderLayout.CENTER);
+
+        // ==== Event Tombol ====
+        btnAdd.addActionListener(e -> tambahProduk());
+        btnShow.addActionListener(e -> ambilSemuaProduk());
+        btnUpdate.addActionListener(e -> updateProduk());
+        btnDelete.addActionListener(e -> deleteProduk());
+
+        // ==== Klik Baris Tabel ====
+        productTable.getSelectionModel().addListSelectionListener(e -> {
+            int row = productTable.getSelectedRow();
+            if (row >= 0) {
+                selectedId = Long.valueOf(tableModel.getValueAt(row, 0).toString());
+                tfName.setText(tableModel.getValueAt(row, 1).toString());
+                tfPrice.setText(tableModel.getValueAt(row, 2).toString());
+                tfCategory.setText(tableModel.getValueAt(row, 3).toString());
             }
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        });
+
+        pack();
+        setLocationRelativeTo(null);
+        setVisible(true);
+    }
+
+    private void tambahProduk() {
+        try {
+            String query = String.format(
+                "mutation { addProduct(name: \"%s\", price: %s, category: \"%s\") { id name } }",
+                tfName.getText(), tfPrice.getText(), tfCategory.getText()
+            );
+
+            String jsonRequest = new Gson().toJson(new GraphQLQuery(query));
+            sendGraphQLRequest(jsonRequest);
+
+            // ❌ Diganti: outputArea.setText(...)
+            // ✅ Ganti jadi popup + refresh tabel
+            JOptionPane.showMessageDialog(this, "Produk berhasil ditambahkan.");
+            ambilSemuaProduk();
+            resetForm();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error tambah: " + e.getMessage());
         }
     }
 
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        g.drawString(scrollingText, 10, 30);
+    // ✅ Ditambahkan: Fitur Update
+    private void updateProduk() {
+        if (selectedId == null) {
+            JOptionPane.showMessageDialog(this, "Pilih produk dari tabel dulu.");
+            return;
+        }
+        try {
+            String deleteQuery = String.format("mutation { deleteProduct(id: %d) }", selectedId);
+            sendGraphQLRequest(new Gson().toJson(new GraphQLQuery(deleteQuery)));
+
+            tambahProduk(); // Tambah ulang setelah hapus
+            selectedId = null;
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error update: " + e.getMessage());
+        }
     }
 
-    public void stop() {
-        stopFlag = true;
+    // ✅ Ditambahkan: Fitur Delete
+    private void deleteProduk() {
+        if (selectedId == null) {
+            JOptionPane.showMessageDialog(this, "Pilih produk dari tabel dulu.");
+            return;
+        }
+        try {
+            String query = String.format("mutation { deleteProduct(id: %d) }", selectedId);
+            sendGraphQLRequest(new Gson().toJson(new GraphQLQuery(query)));
+
+            JOptionPane.showMessageDialog(this, "Produk berhasil dihapus.");
+            ambilSemuaProduk();
+            resetForm();
+            selectedId = null;
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error hapus: " + e.getMessage());
+        }
+    }
+
+    // ✅ Diubah: sebelumnya hanya tampilkan raw JSON di outputArea
+    private void ambilSemuaProduk() {
+        try {
+            String query = "query { allProducts { id name price category } }";
+            String jsonRequest = new Gson().toJson(new GraphQLQuery(query));
+            String response = sendGraphQLRequest(jsonRequest);
+
+            JsonObject data = JsonParser.parseString(response)
+                .getAsJsonObject().getAsJsonObject("data");
+            JsonArray products = data.getAsJsonArray("allProducts");
+
+            tableModel.setRowCount(0); // Bersihkan tabel
+            for (JsonElement el : products) {
+                JsonObject p = el.getAsJsonObject();
+                Object[] row = {
+                    p.get("id").getAsLong(),
+                    p.get("name").getAsString(),
+                    p.get("price").getAsDouble(),
+                    p.get("category").getAsString()
+                };
+                tableModel.addRow(row);
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error ambil data: " + e.getMessage());
+        }
+    }
+
+    private String sendGraphQLRequest(String json) throws Exception {
+        URL url = new URL("http://localhost:4567/graphql");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(json.getBytes());
+        }
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(conn.getInputStream()))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) sb.append(line).append("\n");
+            return sb.toString();
+        }
+    }
+
+    // ✅ Ditambahkan: agar setelah tambah/update/delete, form kosong lagi
+    private void resetForm() {
+        tfName.setText("");
+        tfPrice.setText("");
+        tfCategory.setText("");
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(ProductForm::new);
+    }
+
+    class GraphQLQuery {
+        String query;
+        GraphQLQuery(String query) {
+            this.query = query;
+        }
     }
 }
+
 
 ```
 
